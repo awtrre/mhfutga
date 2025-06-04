@@ -1,0 +1,379 @@
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                    06/04/2025  23:42:24  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V6.22.4.0, INVOKED BY:
+D:\PROGRAM FILES\KELI C51\C51\BIN\BL51.EXE .\Objects\STARTUP.obj, .\Objects\main.obj, .\Objects\motor.obj, .\Objects\but
+>> tons.obj TO .\Objects\run PRINT (.\Listings\run.m51) RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  .\Objects\STARTUP.obj (?C_STARTUP)
+  .\Objects\main.obj (MAIN)
+  .\Objects\motor.obj (MOTOR)
+  .\Objects\buttons.obj (BUTTONS)
+  D:\PROGRAM FILES\KELI C51\C51\LIB\C51S.LIB (?C_INIT)
+  D:\PROGRAM FILES\KELI C51\C51\LIB\C51S.LIB (?C?COPY)
+  D:\PROGRAM FILES\KELI C51\C51\LIB\C51S.LIB (?C?ULDIV)
+  D:\PROGRAM FILES\KELI C51\C51\LIB\C51S.LIB (?C?ULCMP)
+  D:\PROGRAM FILES\KELI C51\C51\LIB\C51S.LIB (?C?LIMUL)
+
+
+LINK MAP OF MODULE:  .\Objects\run (?C_STARTUP)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            DATA    0008H     0013H     UNIT         ?DT?_STEPMOTOR_RUNFORSECONDS?MOTOR
+            DATA    001BH     0013H     UNIT         ?DT?_STEPMOTOR_RUNREVERSEFORSECONDS?MOTOR
+            DATA    002EH     000AH     UNIT         ?DT?BUTTONS
+            IDATA   0038H     0001H     UNIT         ?STACK
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+            CODE    0000H     0003H     ABSOLUTE     
+                    0003H     07FDH                  *** GAP ***
+            CODE    0800H     0202H     UNIT         ?C?LIB_CODE
+            CODE    0A02H     008CH     UNIT         ?C_C51STARTUP
+            CODE    0A8EH     008BH     UNIT         ?PR?_STEPMOTOR_RUNFORSECONDS?MOTOR
+            CODE    0B19H     008AH     UNIT         ?PR?_STEPMOTOR_RUNREVERSEFORSECONDS?MOTOR
+            CODE    0BA3H     005EH     UNIT         ?PR?BUTTON1_HANDLE?BUTTONS
+            CODE    0C01H     005CH     UNIT         ?PR?BUTTON2_HANDLE?BUTTONS
+            CODE    0C5DH     0022H     UNIT         ?PR?_DELAY_MS_LOCAL?BUTTONS
+            CODE    0C7FH     001EH     UNIT         ?PR?_DELAY_MS?MOTOR
+            CODE    0C9DH     0012H     UNIT         ?PR?MAIN?MAIN
+            CODE    0CAFH     0011H     UNIT         ?C_INITSEG
+            CODE    0CC0H     0010H     UNIT         ?CO?MOTOR
+            CODE    0CD0H     0009H     UNIT         ?PR?IS_BUTTON1_PRESSED?BUTTONS
+            CODE    0CD9H     0009H     UNIT         ?PR?IS_BUTTON2_PRESSED?BUTTONS
+            CODE    0CE2H     0004H     UNIT         ?PR?BUTTONS_INIT?BUTTONS
+
+
+
+OVERLAY MAP OF MODULE:   .\Objects\run (?C_STARTUP)
+
+
+SEGMENT
+  +--> CALLED SEGMENT
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  06/04/2025  23:42:24  PAGE 2
+
+
+---------------------
+?C_C51STARTUP
+  +--> ?PR?MAIN?MAIN
+  +--> ?C_INITSEG
+
+?PR?MAIN?MAIN
+  +--> ?PR?BUTTONS_INIT?BUTTONS
+  +--> ?PR?BUTTON1_HANDLE?BUTTONS
+  +--> ?PR?BUTTON2_HANDLE?BUTTONS
+  +--> ?PR?_DELAY_MS?MOTOR
+
+?PR?BUTTON1_HANDLE?BUTTONS
+  +--> ?PR?IS_BUTTON1_PRESSED?BUTTONS
+  +--> ?PR?_DELAY_MS_LOCAL?BUTTONS
+
+?PR?BUTTON2_HANDLE?BUTTONS
+  +--> ?PR?IS_BUTTON2_PRESSED?BUTTONS
+  +--> ?PR?_DELAY_MS_LOCAL?BUTTONS
+
+
+
+SYMBOL TABLE OF MODULE:  .\Objects\run (?C_STARTUP)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        ?C_STARTUP
+  C:0A02H         SEGMENT       ?C_C51STARTUP
+  I:0038H         SEGMENT       ?STACK
+  C:0000H         PUBLIC        ?C_STARTUP
+  D:00E0H         SYMBOL        ACC
+  D:00F0H         SYMBOL        B
+  D:0083H         SYMBOL        DPH
+  D:0082H         SYMBOL        DPL
+  N:0000H         SYMBOL        IBPSTACK
+  N:0100H         SYMBOL        IBPSTACKTOP
+  N:0080H         SYMBOL        IDATALEN
+  C:0A05H         SYMBOL        IDATALOOP
+  N:0000H         SYMBOL        PBPSTACK
+  N:0100H         SYMBOL        PBPSTACKTOP
+  N:0000H         SYMBOL        PDATALEN
+  N:0000H         SYMBOL        PDATASTART
+  N:0000H         SYMBOL        PPAGE
+  N:0000H         SYMBOL        PPAGEENABLE
+  D:00A0H         SYMBOL        PPAGE_SFR
+  D:0081H         SYMBOL        SP
+  C:0A02H         SYMBOL        STARTUP1
+  N:0000H         SYMBOL        XBPSTACK
+  N:0000H         SYMBOL        XBPSTACKTOP
+  N:0000H         SYMBOL        XDATALEN
+  N:0000H         SYMBOL        XDATASTART
+  C:0000H         LINE#         126
+  C:0A02H         LINE#         133
+  C:0A04H         LINE#         134
+  C:0A05H         LINE#         135
+  C:0A06H         LINE#         136
+  C:0A08H         LINE#         185
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  06/04/2025  23:42:24  PAGE 3
+
+
+  C:0A0BH         LINE#         196
+  -------         ENDMOD        ?C_STARTUP
+
+  -------         MODULE        MAIN
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0090H         PUBLIC        P1
+  D:00B0H         PUBLIC        P3
+  D:00A8H         PUBLIC        IE
+  D:00B8H         PUBLIC        IP
+  C:0C9DH         PUBLIC        main
+  D:0098H         PUBLIC        SCON
+  D:0088H         PUBLIC        TCON
+  D:00C8H         PUBLIC        T2CON
+  D:00D0H         PUBLIC        PSW
+  -------         PROC          MAIN
+  C:0C9DH         LINE#         5
+  C:0C9DH         LINE#         6
+  C:0CA0H         LINE#         8
+  C:0CA0H         LINE#         9
+  C:0CA3H         LINE#         10
+  C:0CA6H         LINE#         13
+  C:0CADH         LINE#         14
+  -------         ENDPROC       MAIN
+  -------         ENDMOD        MAIN
+
+  -------         MODULE        MOTOR
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0090H         PUBLIC        P1
+  D:00B0H         PUBLIC        P3
+  D:00A8H         PUBLIC        IE
+  D:00B8H         PUBLIC        IP
+  C:0B19H         PUBLIC        _StepMotor_RunReverseForSeconds
+  D:0098H         PUBLIC        SCON
+  D:0088H         PUBLIC        TCON
+  C:0CC0H         SYMBOL        _?ix1000
+  C:0CC8H         SYMBOL        _?ix1001
+  C:0A8EH         PUBLIC        _StepMotor_RunForSeconds
+  C:0C7FH         PUBLIC        _delay_ms
+  D:00C8H         PUBLIC        T2CON
+  D:00D0H         PUBLIC        PSW
+  -------         PROC          _DELAY_MS
+  D:0006H         SYMBOL        ms
+  -------         DO            
+  D:0006H         SYMBOL        i
+  D:0004H         SYMBOL        j
+  -------         ENDDO         
+  C:0C7FH         LINE#         9
+  C:0C7FH         LINE#         11
+  C:0C88H         LINE#         12
+  C:0C95H         LINE#         13
+  C:0C9CH         LINE#         14
+  -------         ENDPROC       _DELAY_MS
+  -------         PROC          _STEPMOTOR_RUNFORSECONDS
+  D:0008H         SYMBOL        time_s
+  -------         DO            
+  D:000AH         SYMBOL        StepCode
+  D:0012H         SYMBOL        step_index
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  06/04/2025  23:42:24  PAGE 4
+
+
+  D:0013H         SYMBOL        total_steps
+  D:0017H         SYMBOL        i
+  -------         ENDDO         
+  C:0A8EH         LINE#         22
+  C:0A92H         LINE#         24
+  C:0AA5H         LINE#         29
+  C:0AA8H         LINE#         32
+  C:0AC4H         LINE#         35
+  C:0AE3H         LINE#         36
+  C:0AEBH         LINE#         38
+  C:0AEDH         LINE#         39
+  C:0AF4H         LINE#         40
+  C:0AF7H         LINE#         41
+  C:0AF7H         LINE#         43
+  C:0AFEH         LINE#         44
+  C:0B15H         LINE#         46
+  C:0B18H         LINE#         47
+  -------         ENDPROC       _STEPMOTOR_RUNFORSECONDS
+  -------         PROC          _STEPMOTOR_RUNREVERSEFORSECONDS
+  D:001BH         SYMBOL        time_s
+  -------         DO            
+  D:001DH         SYMBOL        StepCode
+  D:0025H         SYMBOL        step_index
+  D:0026H         SYMBOL        total_steps
+  D:002AH         SYMBOL        i
+  -------         ENDDO         
+  C:0B19H         LINE#         54
+  C:0B1DH         LINE#         56
+  C:0B30H         LINE#         62
+  C:0B33H         LINE#         64
+  C:0B4FH         LINE#         67
+  C:0B6EH         LINE#         68
+  C:0B76H         LINE#         71
+  C:0B7AH         LINE#         72
+  C:0B7DH         LINE#         73
+  C:0B7FH         LINE#         74
+  C:0B81H         LINE#         75
+  C:0B81H         LINE#         77
+  C:0B88H         LINE#         78
+  C:0B9FH         LINE#         80
+  C:0BA2H         LINE#         81
+  -------         ENDPROC       _STEPMOTOR_RUNREVERSEFORSECONDS
+  -------         ENDMOD        MOTOR
+
+  -------         MODULE        BUTTONS
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0090H         PUBLIC        P1
+  D:00B0H         PUBLIC        P3
+  D:00A8H         PUBLIC        IE
+  D:00B8H         PUBLIC        IP
+  D:002EH         SYMBOL        StepCode
+  D:0098H         PUBLIC        SCON
+  D:0088H         PUBLIC        TCON
+  D:0036H         SYMBOL        fwd_index
+  C:0C61H         SYMBOL        _delay_ms_local
+  D:0037H         SYMBOL        rev_index
+  C:0BA3H         PUBLIC        Button1_Handle
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  06/04/2025  23:42:24  PAGE 5
+
+
+  C:0C01H         PUBLIC        Button2_Handle
+  D:00C8H         PUBLIC        T2CON
+  C:0CD0H         SYMBOL        is_button1_pressed
+  C:0CE2H         PUBLIC        Buttons_Init
+  C:0CD9H         SYMBOL        is_button2_pressed
+  D:00D0H         PUBLIC        PSW
+  C:0C5DH         SYMBOL        L?0042
+  -------         PROC          L?0041
+  -------         ENDPROC       L?0041
+  C:0C5DH         SYMBOL        L?0042
+  -------         PROC          _DELAY_MS_LOCAL
+  D:0006H         SYMBOL        ms
+  -------         DO            
+  D:0006H         SYMBOL        i
+  D:0004H         SYMBOL        j
+  -------         ENDDO         
+  C:0C61H         LINE#         31
+  C:0C61H         LINE#         33
+  C:0C6AH         LINE#         34
+  C:0C77H         LINE#         35
+  C:0C7EH         LINE#         36
+  -------         ENDPROC       _DELAY_MS_LOCAL
+  -------         PROC          IS_BUTTON1_PRESSED
+  C:0CD0H         LINE#         42
+  C:0CD0H         LINE#         43
+  C:0CD8H         LINE#         44
+  -------         ENDPROC       IS_BUTTON1_PRESSED
+  -------         PROC          IS_BUTTON2_PRESSED
+  C:0CD9H         LINE#         50
+  C:0CD9H         LINE#         51
+  C:0CE1H         LINE#         52
+  -------         ENDPROC       IS_BUTTON2_PRESSED
+  -------         PROC          BUTTONS_INIT
+  C:0CE2H         LINE#         54
+  C:0CE2H         LINE#         56
+  C:0CE5H         LINE#         57
+  -------         ENDPROC       BUTTONS_INIT
+  -------         PROC          BUTTON1_HANDLE
+  -------         DO            
+  D:0002H         SYMBOL        tail_count
+  -------         ENDDO         
+  C:0BA3H         LINE#         59
+  C:0BA3H         LINE#         63
+  C:0BA8H         LINE#         64
+  C:0BAFH         LINE#         65
+  C:0BB4H         LINE#         67
+  C:0BB9H         LINE#         68
+  C:0BC1H         LINE#         69
+  C:0BC3H         LINE#         70
+  C:0BCAH         LINE#         71
+  C:0BCDH         LINE#         72
+  C:0BCDH         LINE#         73
+  C:0BD0H         LINE#         74
+  C:0BD2H         LINE#         76
+  C:0BD5H         LINE#         77
+  C:0BDDH         LINE#         78
+  C:0BDFH         LINE#         79
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  06/04/2025  23:42:24  PAGE 6
+
+
+  C:0BE6H         LINE#         80
+  C:0BE9H         LINE#         81
+  C:0BE9H         LINE#         82
+  C:0BECH         LINE#         83
+  C:0BF7H         LINE#         85
+  C:0BFAH         LINE#         86
+  C:0C00H         LINE#         91
+  C:0C00H         LINE#         92
+  C:0C00H         LINE#         93
+  -------         ENDPROC       BUTTON1_HANDLE
+  -------         PROC          BUTTON2_HANDLE
+  -------         DO            
+  D:0002H         SYMBOL        tail_count
+  -------         ENDDO         
+  C:0C01H         LINE#         95
+  C:0C01H         LINE#         99
+  C:0C06H         LINE#         100
+  C:0C0DH         LINE#         101
+  C:0C12H         LINE#         103
+  C:0C17H         LINE#         104
+  C:0C1FH         LINE#         105
+  C:0C23H         LINE#         106
+  C:0C26H         LINE#         107
+  C:0C28H         LINE#         108
+  C:0C2AH         LINE#         109
+  C:0C2AH         LINE#         110
+  C:0C2DH         LINE#         111
+  C:0C2FH         LINE#         113
+  C:0C32H         LINE#         114
+  C:0C3AH         LINE#         115
+  C:0C3EH         LINE#         116
+  C:0C41H         LINE#         117
+  C:0C43H         LINE#         118
+  C:0C45H         LINE#         119
+  C:0C45H         LINE#         120
+  C:0C48H         LINE#         121
+  C:0C53H         LINE#         123
+  C:0C56H         LINE#         124
+  C:0C5CH         LINE#         128
+  C:0C5CH         LINE#         129
+  C:0C5CH         LINE#         130
+  -------         ENDPROC       BUTTON2_HANDLE
+  -------         ENDMOD        BUTTONS
+
+  -------         MODULE        ?C?COPY
+  C:08D0H         PUBLIC        ?C?COPY
+  -------         ENDMOD        ?C?COPY
+
+  -------         MODULE        ?C?ULDIV
+  C:0932H         PUBLIC        ?C?ULDIV
+  -------         ENDMOD        ?C?ULDIV
+
+  -------         MODULE        ?C?ULCMP
+  C:09C4H         PUBLIC        ?C?ULCMP
+  -------         ENDMOD        ?C?ULCMP
+
+  -------         MODULE        ?C?LIMUL
+BL51 BANKED LINKER/LOCATER V6.22.4.0                                                  06/04/2025  23:42:24  PAGE 7
+
+
+  C:09D5H         PUBLIC        ?C?LIMUL
+  -------         ENDMOD        ?C?LIMUL
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_STEPMOTOR_RUNFORSECONDS?MOTOR
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_STEPMOTOR_RUNREVERSEFORSECONDS?MOTOR
+
+******************************************************************************
+* RESTRICTED VERSION WITH 0800H BYTE CODE SIZE LIMIT; USED: 0266H BYTE (29%) *
+******************************************************************************
+
+Program Size: data=57.0 xdata=0 code=1257
+LINK/LOCATE RUN COMPLETE.  2 WARNING(S),  0 ERROR(S)

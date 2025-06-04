@@ -1,0 +1,6 @@
+".\Objects\STARTUP.obj",
+".\Objects\main.obj",
+".\Objects\motor.obj",
+".\Objects\buttons.obj" 
+TO ".\Objects\run" 
+PRINT(".\Listings\run.m51") RAMSIZE(256) 

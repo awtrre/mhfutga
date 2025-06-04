@@ -1,0 +1,107 @@
+C51 COMPILER V9.60.7.0   MOTOR                                                             06/04/2025 22:59:30 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MOTOR
+OBJECT MODULE PLACED IN .\Objects\motor.obj
+COMPILER INVOKED BY: D:\Program Files\Keli C51\C51\BIN\C51.EXE motor.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT
+                    -(.\Listings\motor.lst) TABS(2) OBJECT(.\Objects\motor.obj)
+
+line level    source
+
+   1          #include "motor.h"
+   2          
+   3          /**
+   4           * @brief Delay for approximately ms milliseconds.
+   5           *        This is a blocking, software-based delay.
+   6           *
+   7           * @param ms Number of milliseconds to delay
+   8           */
+   9          void delay_ms(unsigned int ms) {
+  10   1          unsigned int i, j;
+  11   1          for (i = ms; i > 0; i--) {
+  12   2              for (j = 110; j > 0; j--);
+  13   2          }
+  14   1      }
+  15          
+  16          /**
+  17           * @brief Run the stepper motor for a specified number of seconds.
+  18           *        After the elapsed time, the motor outputs are turned off.
+  19           *
+  20           * @param time_s Duration in seconds (each step ˜2ms, total_steps = time_s * 1000 / 2)
+  21           */
+  22          void StepMotor_RunForSeconds(unsigned int time_s) {
+  23   1          // 8-step half-stepping sequence for a unipolar stepper motor
+  24   1          unsigned char StepCode[8] = {
+  25   1              0x01, 0x03, 0x02, 0x06,
+  26   1              0x04, 0x0C, 0x08, 0x09
+  27   1          };
+  28   1      
+  29   1          unsigned char step_index = 0;
+  30   1          // Calculate total number of steps: one step ˜ 2ms
+  31   1          // total_steps = (time_s * 1000ms) / 2ms_per_step
+  32   1          unsigned long total_steps = ((unsigned long)time_s * 1000UL) / 2UL;
+  33   1          unsigned long i;
+  34   1      
+  35   1          for (i = 0; i < total_steps; i++) {
+  36   2              MOTOR_PORT = StepCode[step_index];  // Output current step pattern
+  37   2      
+  38   2              step_index++;
+  39   2              if (step_index >= 8) {
+  40   3                  step_index = 0;  // Wrap around after 8 patterns
+  41   3              }
+  42   2      
+  43   2              delay_ms(2);  // Wait ~2ms between steps
+  44   2          }
+  45   1      
+  46   1          MOTOR_PORT = 0x00;  // Turn off all coils (stop motor) after finishing
+  47   1      }
+  48          /**
+  49           * @brief Run the stepper motor in reverse direction for a specified number of seconds.
+  50           *        After the elapsed time, the motor outputs are turned off.
+  51           *
+  52           * @param time_s Duration in seconds (each step ~2ms, total_steps = time_s * 1000 / 2)
+  53           */
+  54          void StepMotor_RunReverseForSeconds(unsigned int time_s) {
+C51 COMPILER V9.60.7.0   MOTOR                                                             06/04/2025 22:59:30 PAGE 2   
+
+  55   1          // 8-step half-stepping sequence for a unipolar stepper motor (same array, but iterate backwards)
+  56   1          unsigned char StepCode[8] = {
+  57   1              0x01, 0x03, 0x02, 0x06,
+  58   1              0x04, 0x0C, 0x08, 0x09
+  59   1          };
+  60   1      
+  61   1          // Start from the last index to move in reverse
+  62   1          unsigned char step_index = 7;
+  63   1          // Calculate total number of steps: one step ~2ms
+  64   1          unsigned long total_steps = ((unsigned long)time_s * 1000UL) / 2UL;
+  65   1          unsigned long i;
+  66   1      
+  67   1          for (i = 0; i < total_steps; i++) {
+  68   2              MOTOR_PORT = StepCode[step_index];  // Output current step pattern
+  69   2      
+  70   2              // Decrement index to go in reverse order
+  71   2              if (step_index == 0) {
+  72   3                  step_index = 7;
+  73   3              } else {
+  74   3                  step_index--;
+  75   3              }
+  76   2      
+  77   2              delay_ms(2);  // Wait ~2ms between steps
+  78   2          }
+  79   1      
+  80   1          MOTOR_PORT = 0x00;  // Turn off all coils (stop motor) after finishing
+  81   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    307    ----
+   CONSTANT SIZE    =     16    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      38
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
