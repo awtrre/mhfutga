@@ -1,0 +1,164 @@
+C51 COMPILER V9.60.7.0   HCSR04                                                            06/06/2025 00:01:25 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE HCSR04
+OBJECT MODULE PLACED IN .\Objects\hcsr04.obj
+COMPILER INVOKED BY: D:\Program Files\Keli C51\C51\BIN\C51.EXE hcsr04.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\hcsr04.lst) TABS(2) OBJECT(.\Objects\hcsr04.obj)
+
+line level    source
+
+   1          // hcsr04.c
+   2          
+   3          #include "hcsr04.h"
+   4          #include "onekey.h"      /* For OneKey_Close() and OneKey_IsMoving() */
+   5          #include <intrins.h>     /* for _nop_() */
+   6          
+   7          /*
+   8           * We will use Timer0 in mode 1 (16-bit) to measure echo pulse width.
+   9           * Assume crystal frequency is 12MHz, so 1 timer tick ˜ 1µs.
+  10           */
+  11          
+  12          #define OBSTACLE_THRESHOLD_CM   20    /* Obstacle threshold in cm */
+  13          
+  14          /* Internal flag: whether we have already triggered a close action */
+  15          static bit obstacle_triggered = 0;
+  16          
+  17          /**
+  18           * @brief  Microsecond-level approximate delay.
+  19           *         Calibrated for 12MHz crystal and Keil C51 optimization level 2.
+  20           *
+  21           * @param us  Number of microseconds to delay.
+  22           */
+  23          static void delay_us(unsigned int us)
+  24          {
+  25   1          unsigned int i;
+  26   1          /* Approximately 1µs per loop iteration at 12MHz, OPTIMIZE=2 */
+  27   1          for (i = 0; i < us; i++)
+  28   1          {
+  29   2              _nop_();
+  30   2              _nop_();
+  31   2          }
+  32   1      }
+  33          
+  34          /**
+  35           * @brief  Initialize TRIG as output low; ECHO as input with pull-up.
+  36           */
+  37          void HCSR04_Init(void)
+  38          {
+  39   1          HCSR04_TRIG = 0;      /* Ensure TRIG is low */
+  40   1          P2 |= 0x02;           /* Pull-up P2.1 (ECHO) if needed */
+  41   1      }
+  42          
+  43          /**
+  44           * @brief  Trigger an ultrasonic burst and measure echo pulse width.
+  45           * @return Distance in cm, or 0xFFFF if timeout/no echo.
+  46           */
+  47          unsigned int HCSR04_GetDistanceCm(void)
+  48          {
+  49   1          unsigned int count;
+  50   1          unsigned int dist_cm;
+  51   1          unsigned int timeout;
+  52   1      
+  53   1          /* 1) Send 10µs TRIG pulse */
+  54   1          HCSR04_TRIG = 0;
+C51 COMPILER V9.60.7.0   HCSR04                                                            06/06/2025 00:01:25 PAGE 2   
+
+  55   1          delay_us(2);
+  56   1          HCSR04_TRIG = 1;
+  57   1          delay_us(10);
+  58   1          HCSR04_TRIG = 0;
+  59   1      
+  60   1          /* 2) Wait for ECHO to go high (start). Timeout ~30ms */
+  61   1          timeout = 30000;
+  62   1          while (!HCSR04_ECHO)
+  63   1          {
+  64   2              if (--timeout == 0) 
+  65   2              {
+  66   3                  return 0xFFFF;  /* Timeout: no echo detected */
+  67   3              }
+  68   2          }
+  69   1      
+  70   1          /* 3) Start Timer0 (mode1) to count µs */
+  71   1          TMOD &= 0xF0;
+  72   1          TMOD |= 0x01;   /* Timer0 in mode 1 (16-bit) */
+  73   1          TH0 = 0;
+  74   1          TL0 = 0;
+  75   1          TR0 = 1;
+  76   1      
+  77   1          /* 4) Wait for ECHO to go low or timeout ~30ms */
+  78   1          timeout = 30000;
+  79   1          while (HCSR04_ECHO)
+  80   1          {
+  81   2              if (--timeout == 0) 
+  82   2              {
+  83   3                  TR0 = 0;  /* Stop timer */
+  84   3                  return 0xFFFF;
+  85   3              }
+  86   2          }
+  87   1      
+  88   1          /* 5) Stop Timer0, read count */
+  89   1          TR0 = 0;
+  90   1          count = (TH0 << 8) | TL0; /* Timer value in ticks (~1µs/tick) */
+  91   1      
+  92   1          /* 6) Convert to cm: sound speed round-trip ~58µs per cm */
+  93   1          dist_cm = count / 58;
+  94   1          return dist_cm;
+  95   1      }
+  96          
+  97          /**
+  98           * @brief  Periodic task: if motor is moving, skip ultrasonic entirely.
+  99           *         Only when motor is idle, perform distance measurement:
+ 100           *         - If distance <= threshold and not yet triggered, call OneKey_Close() once.
+ 101           *         - If distance > threshold or timeout, reset trigger flag.
+ 102           *
+ 103           *         Call this every cycle (e.g., ~10ms in main loop).
+ 104           */
+ 105          void HCSR04_Task(void)
+ 106          {
+ 107   1          unsigned int distance;
+ 108   1      
+ 109   1          /* 1) If motor is in motion, skip HC-SR04 ops and reset flag */
+ 110   1          if (OneKey_IsMoving())
+ 111   1          {
+ 112   2              /* Clear trigger flag so next time motor is idle,
+ 113   2               * a new obstacle-trigger can occur if needed */
+ 114   2              obstacle_triggered = 0;
+ 115   2              return;
+ 116   2          }
+C51 COMPILER V9.60.7.0   HCSR04                                                            06/06/2025 00:01:25 PAGE 3   
+
+ 117   1      
+ 118   1          /* 2) Motor is idle: perform distance measurement */
+ 119   1          distance = HCSR04_GetDistanceCm();
+ 120   1      
+ 121   1          /* 3) If valid distance and <= threshold AND not yet triggered */
+ 122   1          if (distance != 0xFFFF && distance <= OBSTACLE_THRESHOLD_CM)
+ 123   1          {
+ 124   2              if (!obstacle_triggered)
+ 125   2              {
+ 126   3                  /* Trigger one-key close exactly once */
+ 127   3                  OneKey_Close();
+ 128   3                  obstacle_triggered = 1;
+ 129   3              }
+ 130   2          }
+ 131   1          else
+ 132   1          {
+ 133   2              /* If no obstacle or distance > threshold, reset flag */
+ 134   2              obstacle_triggered = 0;
+ 135   2          }
+ 136   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    157    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

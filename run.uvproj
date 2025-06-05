@@ -387,14 +387,14 @@
               <FilePath>.\main.c</FilePath>
             </File>
             <File>
-              <FileName>motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\motor.c</FilePath>
-            </File>
-            <File>
               <FileName>motor.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\motor.c</FilePath>
             </File>
             <File>
               <FileName>buttons.h</FileName>
@@ -405,6 +405,36 @@
               <FileName>buttons.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\buttons.c</FilePath>
+            </File>
+            <File>
+              <FileName>eeprom.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\eeprom.h</FilePath>
+            </File>
+            <File>
+              <FileName>eeprom.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\eeprom.c</FilePath>
+            </File>
+            <File>
+              <FileName>onekey.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\onekey.h</FilePath>
+            </File>
+            <File>
+              <FileName>onekey.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\onekey.c</FilePath>
+            </File>
+            <File>
+              <FileName>hcsr04.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\hcsr04.h</FilePath>
+            </File>
+            <File>
+              <FileName>hcsr04.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\hcsr04.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -1,0 +1,160 @@
+C51 COMPILER V9.60.7.0   EEPROM                                                            06/05/2025 23:43:01 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE EEPROM
+OBJECT MODULE PLACED IN .\Objects\eeprom.obj
+COMPILER INVOKED BY: D:\Program Files\Keli C51\C51\BIN\C51.EXE eeprom.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\eeprom.lst) TABS(2) OBJECT(.\Objects\eeprom.obj)
+
+line level    source
+
+   1          // eeprom.c
+   2          
+   3          #include "eeprom.h"
+   4          #include <intrins.h>     /* _nop_() */
+   5          
+   6          /* IAP special function registers */
+   7          sfr ISP_DATA  = 0xE2;
+   8          sfr ISP_ADDRH = 0xE3;
+   9          sfr ISP_ADDRL = 0xE4;
+  10          sfr ISP_CMD   = 0xE5;
+  11          sfr ISP_TRIG  = 0xE6;
+  12          sfr ISP_CONTR = 0xE7;
+  13          
+  14          /* IAP timing: 12 MHz crystal -> WAIT_TIME = 0x02 */
+  15          #define WAIT_TIME       0x02
+  16          
+  17          /* ISP command codes */
+  18          #define ISP_CMD_READ    0x01
+  19          #define ISP_CMD_PROGRAM 0x02
+  20          #define ISP_CMD_ERASE   0x03
+  21          
+  22          /**
+  23           * @brief  Enable IAP (In-Application Programming) interface.
+  24           */
+  25          static void IAP_Enable(void)
+  26          {
+  27   1          EA = 0;                              /* Disable global interrupts */
+  28   1          ISP_CONTR = (ISP_CONTR & 0x18) | WAIT_TIME;
+  29   1          ISP_CONTR |= 0x80;                   /* Set ISPEN = 1 */
+  30   1      }
+  31          
+  32          /**
+  33           * @brief  Disable IAP interface and re-enable interrupts.
+  34           */
+  35          static void IAP_Disable(void)
+  36          {
+  37   1          ISP_CONTR &= 0x7F;                   /* Clear ISPEN = 0 */
+  38   1          ISP_TRIG   = 0x00;
+  39   1          EA = 1;                              /* Re-enable interrupts */
+  40   1      }
+  41          
+  42          /**
+  43           * @brief  Trigger the IAP operation sequence.
+  44           */
+  45          static void IAP_Trigger(void)
+  46          {
+  47   1          ISP_TRIG = 0x46;
+  48   1          ISP_TRIG = 0xB9;
+  49   1          _nop_();                             /* Timing NOP */
+  50   1      }
+  51          
+  52          /**
+  53           * @brief  Read one byte from Data-Flash at byte_addr.
+  54           */
+C51 COMPILER V9.60.7.0   EEPROM                                                            06/05/2025 23:43:01 PAGE 2   
+
+  55          unsigned char EEPROM_ReadByte(unsigned int byte_addr)
+  56          {
+  57   1          unsigned char val;
+  58   1          ISP_ADDRH = (unsigned char)(byte_addr >> 8);
+  59   1          ISP_ADDRL = (unsigned char) byte_addr;
+  60   1          ISP_CMD   = (ISP_CMD & 0xF8) | ISP_CMD_READ;
+  61   1      
+  62   1          IAP_Enable();
+  63   1          IAP_Trigger();
+  64   1          val = ISP_DATA;
+  65   1          IAP_Disable();
+  66   1      
+  67   1          return val;
+  68   1      }
+  69          
+  70          /**
+  71           * @brief  Erase the 512-byte sector aligned to sector_addr.
+  72           */
+  73          void EEPROM_EraseSector(unsigned int sector_addr)
+  74          {
+  75   1          unsigned int base = sector_addr & 0xFE00;   /* Align to 512-byte boundary */
+  76   1      
+  77   1          ISP_ADDRH = (unsigned char)(base >> 8);
+  78   1          ISP_ADDRL = 0x00;
+  79   1          ISP_CMD   = (ISP_CMD & 0xF8) | ISP_CMD_ERASE;
+  80   1      
+  81   1          IAP_Enable();
+  82   1          IAP_Trigger();
+  83   1          IAP_Disable();
+  84   1      }
+  85          
+  86          /**
+  87           * @brief  Write one byte to Data-Flash at byte_addr (sector must be erased).
+  88           */
+  89          void EEPROM_WriteByte(unsigned int byte_addr, unsigned char value)
+  90          {
+  91   1          ISP_ADDRH = (unsigned char)(byte_addr >> 8);
+  92   1          ISP_ADDRL = (unsigned char) byte_addr;
+  93   1          ISP_DATA  = value;                       /* Load data */
+  94   1          ISP_CMD   = (ISP_CMD & 0xF8) | ISP_CMD_PROGRAM;
+  95   1      
+  96   1          IAP_Enable();
+  97   1          IAP_Trigger();
+  98   1          IAP_Disable();
+  99   1      }
+ 100          
+ 101          /**
+ 102           * @brief  Initialize EEPROM emulation (empty for STC89C52RC).
+ 103           */
+ 104          void EEPROM_Init(void)
+ 105          {
+ 106   1          /* No action needed for Data-Flash on STC89C52RC */
+ 107   1      }
+ 108          
+ 109          extern long g_position_ms;  /* Defined in main.c */
+ 110          
+ 111          /**
+ 112           * @brief  Store the global g_position_ms into Data-Flash at 0x2000..0x2003.
+ 113           */
+ 114          void SavePositionToEEPROM(void)
+ 115          {
+ 116   1          unsigned char b0, b1, b2, b3;
+C51 COMPILER V9.60.7.0   EEPROM                                                            06/05/2025 23:43:01 PAGE 3   
+
+ 117   1      
+ 118   1          /* Split 32-bit value into four bytes (little-endian) */
+ 119   1          b0 = (unsigned char)( g_position_ms        & 0xFF );
+ 120   1          b1 = (unsigned char)((g_position_ms >>  8) & 0xFF);
+ 121   1          b2 = (unsigned char)((g_position_ms >> 16) & 0xFF);
+ 122   1          b3 = (unsigned char)((g_position_ms >> 24) & 0xFF);
+ 123   1      
+ 124   1          /* Erase 512-byte sector at 0x2000 */
+ 125   1          EEPROM_EraseSector(0x2000);
+ 126   1      
+ 127   1          /* Program the four bytes */
+ 128   1          EEPROM_WriteByte(0x2000, b0);
+ 129   1          EEPROM_WriteByte(0x2001, b1);
+ 130   1          EEPROM_WriteByte(0x2002, b2);
+ 131   1          EEPROM_WriteByte(0x2003, b3);
+ 132   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    185    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
