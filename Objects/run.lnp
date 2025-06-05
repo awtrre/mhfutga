@@ -1,6 +1,9 @@
 ".\Objects\STARTUP.obj",
 ".\Objects\main.obj",
 ".\Objects\motor.obj",
-".\Objects\buttons.obj" 
+".\Objects\buttons.obj",
+".\Objects\eeprom.obj",
+".\Objects\onekey.obj",
+".\Objects\hcsr04.obj" 
 TO ".\Objects\run" 
 PRINT(".\Listings\run.m51") RAMSIZE(256) 

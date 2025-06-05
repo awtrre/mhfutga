@@ -1,0 +1,147 @@
+C51 COMPILER V9.60.7.0   ONEKEY                                                            06/06/2025 00:01:25 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE ONEKEY
+OBJECT MODULE PLACED IN .\Objects\onekey.obj
+COMPILER INVOKED BY: D:\Program Files\Keli C51\C51\BIN\C51.EXE onekey.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\onekey.lst) TABS(2) OBJECT(.\Objects\onekey.obj)
+
+line level    source
+
+   1          // onekey.c
+   2          
+   3          #include "onekey.h"
+   4          #include "motor.h"      /* Provides StepMotor_RunMs, StepMotor_RunReverseMs, StepMotor_Stop */
+   5          #include "eeprom.h"     /* Provides SavePositionToEEPROM */
+   6          #include <reg52.h>      /* SFR definitions */
+   7          
+   8          /* External global variable holding current position in ms */
+   9          extern long g_position_ms;
+  10          
+  11          /* Internal flag to indicate if motor is running (0 = idle, 1 = running) */
+  12          static bit g_motor_running = 0;
+  13          
+  14          /**
+  15           * @brief  Immediately stop motor and save current position to EEPROM.
+  16           *         Note: In this simplified implementation, we cannot calculate
+  17           *         the new g_position_ms if it's stopped mid-run, so we leave it unchanged.
+  18           */
+  19          void OneKey_StopAndSave(void)
+  20          {
+  21   1          /* If motor is currently running, stop it */
+  22   1          if (g_motor_running)
+  23   1          {
+  24   2              StepMotor_Stop();
+  25   2              /* Do NOT change g_position_ms here, because we don't know elapsed time */
+  26   2              SavePositionToEEPROM();
+  27   2              g_motor_running = 0;
+  28   2          }
+  29   1      }
+  30          
+  31          /**
+  32           * @brief  Initiate a one-key open action:
+  33           *         - If motor currently running, stop and save.
+  34           *         - Else if not fully open, run forward continuously until fully open.
+  35           */
+  36          void OneKey_Open(void)
+  37          {
+  38   1          unsigned long remaining_time;
+  39   1      
+  40   1          /* If motor already running, stop + save, then return */
+  41   1          if (g_motor_running)
+  42   1          {
+  43   2              OneKey_StopAndSave();
+  44   2              return;
+  45   2          }
+  46   1      
+  47   1          /* If already fully closed or below, do nothing */
+  48   1          if (g_position_ms <= 0)
+  49   1          {
+  50   2              return;
+  51   2          }
+  52   1      
+  53   1          /* Calculate how much time is needed to reach 0 */
+  54   1          remaining_time = (unsigned long)g_position_ms;  /* time to run reverse to zero */
+C51 COMPILER V9.60.7.0   ONEKEY                                                            06/06/2025 00:01:25 PAGE 2   
+
+  55   1      
+  56   1          /* Run reverse for remaining_time (blocking call) */
+  57   1          g_motor_running = 1;
+  58   1          StepMotor_RunReverseMs((unsigned int)remaining_time);
+  59   1      
+  60   1          /* After running to fully closed, update position and save */
+  61   1          g_position_ms = 0;
+  62   1          StepMotor_Stop();
+  63   1          SavePositionToEEPROM();
+  64   1          g_motor_running = 0;
+  65   1      
+  66   1      }
+  67          
+  68          /**
+  69           * @brief  Initiate a one-key close action:
+  70           *         - If motor currently running, stop and save.
+  71           *         - Else if not fully closed, run reverse continuously until fully closed.
+  72           */
+  73          void OneKey_Close(void)
+  74          {
+  75   1         unsigned long remaining_time;
+  76   1      
+  77   1          /* If motor already running, stop + save, then return */
+  78   1          if (g_motor_running)
+  79   1          {
+  80   2              OneKey_StopAndSave();
+  81   2              return;
+  82   2          }
+  83   1      
+  84   1          /* If already fully open or beyond, do nothing */
+  85   1          if (g_position_ms >= TOTAL_TIME_MS)
+  86   1          {
+  87   2              return;
+  88   2          }
+  89   1      
+  90   1          /* Calculate how much time is needed to reach TOTAL_TIME_MS */
+  91   1          remaining_time = TOTAL_TIME_MS - g_position_ms;
+  92   1      
+  93   1          /* Run forward for remaining_time (blocking call) */
+  94   1          g_motor_running = 1;
+  95   1          StepMotor_RunMs((unsigned int)remaining_time);
+  96   1      
+  97   1          /* After running to fully open, update position and save */
+  98   1          g_position_ms = TOTAL_TIME_MS;
+  99   1          StepMotor_Stop();
+ 100   1          SavePositionToEEPROM();
+ 101   1          g_motor_running = 0;
+ 102   1      }
+ 103          
+ 104          /**
+ 105           * @brief  Empty periodic task placeholder. In this blocking design,
+ 106           *         OneKey_Open/Close do all the work, so OneKey_Task() can be empty.
+ 107           */
+ 108          void OneKey_Task(void)
+ 109          {
+ 110   1          /* No periodic slices needed in blocking implementation */
+ 111   1      }
+ 112          
+ 113          /**
+ 114           * @brief  Return non-zero if motor is currently in motion.
+ 115           */
+ 116          unsigned char OneKey_IsMoving(void)
+C51 COMPILER V9.60.7.0   ONEKEY                                                            06/06/2025 00:01:25 PAGE 3   
+
+ 117          {
+ 118   1          return g_motor_running ? 1 : 0;
+ 119   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    164    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       8
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

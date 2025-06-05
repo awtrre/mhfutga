@@ -1,0 +1,1 @@
+"hcsr04.c" OPTIMIZE (8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\hcsr04.lst) TABS (2) OBJECT(.\Objects\hcsr04.obj)
