@@ -25,16 +25,7 @@
 输入按键	4 个轻触按键	buttons.c
 声音提示	1 个有源或无源蜂鸣器	buzzer.c
 系统时钟	12MHz 晶振	motor.c (延时函数基于此)
-📁 代码结构 (Code Structure)
-.
-├── main.c              # 主程序入口，初始化并调度任务
-├── buttons.c/h         # 物理按键的处理逻辑（手动、一键开/关）
-├── motor.c/h           # 步进电机驱动（前进、后退、停止）和延时函数
-├── onekey.c/h          # "一键"全开/全关及运动中断的核心逻辑
-├── hcsr04.c/h          # HC-SR04超声波传感器的数据读取与安全判断
-├── eeprom.c/h          # 读写单片机内部EEPROM，用于断电记忆
-├── buzzer.c/h          # 蜂鸣器驱动，用于发出警报声
-└── run.uvproj          # Keil C51 工程文件
+
 ⚙️ 工作原理 (How It Works)
 位置追踪: 系统通过一个全局变量 g_position_ms 来记录窗户的当前位置。该变量表示电机从完全关闭状态（0ms）运行到当前状态所需的毫秒数。最大行程由 TOTAL_TIME_MS (10000L) 定义。
 
