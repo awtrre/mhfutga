@@ -1,0 +1,145 @@
+C51 COMPILER V9.60.7.0   BUZZER                                                            06/07/2025 00:14:39 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE BUZZER
+OBJECT MODULE PLACED IN .\Objects\buzzer.obj
+COMPILER INVOKED BY: D:\Program Files\Keli C51\C51\BIN\C51.EXE buzzer.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\buzzer.lst) TABS(2) OBJECT(.\Objects\buzzer.obj)
+
+line level    source
+
+   1          #include "buzzer.h"
+   2          #include <reg52.h>
+   3          
+   4          /* 
+   5           * Global flag indicating whether automatic beeping is allowed.
+   6           *  - 0: disable automatic beeping (manual mode or idle).
+   7           *  - 1: enable automatic beeping during auto-close.
+   8           */
+   9          bit g_buzzer_enabled = 0;
+  10          
+  11          /**
+  12           * @brief  Timer0 interrupt service routine.
+  13           *         When Timer0 overflows (~50ms), this ISR turns off the buzzer
+  14           *         and stops Timer0 to prevent further interrupts.
+  15           */
+  16          void Timer0_ISR(void) interrupt 1
+  17          {
+  18   1          /* Turn off the buzzer pin */
+  19   1          BUZZER = 0;
+  20   1      
+  21   1          /* Stop Timer0 and disable its interrupt */
+  22   1          TR0 = 0;   /* Stop Timer0 */
+  23   1          ET0 = 0;   /* Disable Timer0 interrupt */
+  24   1      
+  25   1          /* TF0 (overflow flag) is automatically cleared on ISR entry */
+  26   1      }
+  27          
+  28          /**
+  29           * @brief  Initialize buzzer pin and Timer0 settings.
+  30           *         - Configure P2.5 as GPIO output, initial low.
+  31           *         - Configure Timer0 in mode1 (16-bit), interrupt disabled initially.
+  32           */
+  33          void Buzzer_Init(void)
+  34          {
+  35   1          /* Ensure buzzer is off */
+  36   1          BUZZER = 0;
+  37   1      
+  38   1          /* Configure Timer0 to Mode1 (16-bit timer). Clear previous mode bits first */
+  39   1          TMOD &= 0xF0;  /* Clear lower 4 bits (Timer0 mode bits) */
+  40   1          TMOD |= 0x01;  /* Set Timer0 to mode1 (16-bit timer) */
+  41   1      
+  42   1          /* Ensure Timer0 is stopped and interrupt is disabled */
+  43   1          TR0 = 0;
+  44   1          ET0 = 0;
+  45   1          TF0 = 0;
+  46   1      }
+  47          
+  48          /**
+  49           * @brief  Enable automatic beeping during auto-close operation.
+  50           */
+  51          void Buzzer_Enable(void)
+  52          {
+  53   1          g_buzzer_enabled = 1;
+  54   1      }
+C51 COMPILER V9.60.7.0   BUZZER                                                            06/07/2025 00:14:39 PAGE 2   
+
+  55          
+  56          /**
+  57           * @brief  Disable automatic beeping and ensure buzzer pin is off.
+  58           */
+  59          void Buzzer_Disable(void)
+  60          {
+  61   1          g_buzzer_enabled = 0;
+  62   1      
+  63   1          /* Turn off buzzer immediately if it was on */
+  64   1          BUZZER = 0;
+  65   1      
+  66   1          /* Stop Timer0 and disable its interrupt in case it was still running */
+  67   1          TR0 = 0;
+  68   1          ET0 = 0;
+  69   1          TF0 = 0;
+  70   1      }
+  71          
+  72          /**
+  73           * @brief  Produce one short beep (~50ms) via Timer0 interrupt (non-blocking).
+  74           *         If buzzer is enabled, this function will:
+  75           *           1. Set P2.5 = 1 (turn buzzer on).
+  76           *           2. Load Timer0 initial value for ~50ms countdown.
+  77           *           3. Enable Timer0 and its interrupt.
+  78           *           4. Return immediately (no CPU busy-wait).
+  79           */
+  80          void Buzzer_Beep(void)
+  81          {
+  82   1          unsigned int t0_init;
+  83   1      
+  84   1          /* Only beep when automatic mode is enabled */
+  85   1          if (!g_buzzer_enabled)
+  86   1          {
+  87   2              return;
+  88   2          }
+  89   1      
+  90   1          /* Turn buzzer pin on */
+  91   1          BUZZER = 1;
+  92   1      
+  93   1          /*
+  94   1           * Calculate Timer0 initial value for ~50ms delay:
+  95   1           * Assuming 12MHz crystal, 1 machine cycle = 1µs.
+  96   1           * To achieve 50ms delay, need 50000 timer ticks.
+  97   1           * Timer0 is 16-bit, total count = 65536. So initial value = 65536 - 50000 = 15536 (0x3CB0).
+  98   1           */
+  99   1          t0_init = 0x3CB0;
+ 100   1          TH0 = (unsigned char)(t0_init >> 8);
+ 101   1          TL0 = (unsigned char)(t0_init & 0xFF);
+ 102   1      
+ 103   1          /* Clear overflow flag just in case */
+ 104   1          TF0 = 0;
+ 105   1      
+ 106   1          /* Enable Timer0 interrupt and start Timer0 */
+ 107   1          ET0 = 1;
+ 108   1          TR0 = 1;
+ 109   1      }
+ 110          
+ 111          /**
+ 112           * @brief  Return non-zero if buzzer beeping is currently enabled.
+ 113           */
+ 114          bit Buzzer_IsEnabled(void)
+ 115          {
+ 116   1          return g_buzzer_enabled;
+C51 COMPILER V9.60.7.0   BUZZER                                                            06/07/2025 00:14:39 PAGE 3   
+
+ 117   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     59    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

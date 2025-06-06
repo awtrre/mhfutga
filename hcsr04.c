@@ -3,10 +3,14 @@
 #include "hcsr04.h"
 #include "onekey.h"      /* For OneKey_Close() and OneKey_IsMoving() */
 #include <intrins.h>     /* for _nop_() */
+#include <reg52.h>       /* SFR definitions */
+#include "buzzer.h" 		/* NEW: For Buzzer_Enable()/Buzzer_Disable() */
+
+extern long g_position_ms;  /* Declare external global from main.c */
 
 /*
  * We will use Timer0 in mode 1 (16-bit) to measure echo pulse width.
- * Assume crystal frequency is 12MHz, so 1 timer tick ˜ 1µs.
+ * Assume crystal frequency is 12MHz, so 1 timer tick ~1µs.
  */
 
 #define OBSTACLE_THRESHOLD_CM   20    /* Obstacle threshold in cm */
@@ -61,7 +65,7 @@ unsigned int HCSR04_GetDistanceCm(void)
     timeout = 30000;
     while (!HCSR04_ECHO)
     {
-        if (--timeout == 0) 
+        if (--timeout == 0)
         {
             return 0xFFFF;  /* Timeout: no echo detected */
         }
@@ -78,7 +82,7 @@ unsigned int HCSR04_GetDistanceCm(void)
     timeout = 30000;
     while (HCSR04_ECHO)
     {
-        if (--timeout == 0) 
+        if (--timeout == 0)
         {
             TR0 = 0;  /* Stop timer */
             return 0xFFFF;
@@ -95,42 +99,72 @@ unsigned int HCSR04_GetDistanceCm(void)
 }
 
 /**
- * @brief  Periodic task: if motor is moving, skip ultrasonic entirely.
- *         Only when motor is idle, perform distance measurement:
- *         - If distance <= threshold and not yet triggered, call OneKey_Close() once.
- *         - If distance > threshold or timeout, reset trigger flag.
+ * @brief  Periodic task with debouncing & down-sample:
+ *         – Measure distance only once every 100 ms (skip 9 calls).
+ *         – If motor is MOVING, skip and reset flags.
+ *         – If IDLE and distance = threshold for 3 consecutive readings, trigger OneKey_Close() once.
+ *         – If distance > threshold for 3 consecutive readings, reset trigger flag.
  *
  *         Call this every cycle (e.g., ~10ms in main loop).
  */
 void HCSR04_Task(void)
 {
+    static unsigned char skip_cnt  = 0;  /* Counter to implement 100ms down-sampling (0..9) */
+    static unsigned char hit_cnt   = 0;  /* Consecutive readings = threshold */
+    static unsigned char miss_cnt  = 0;  /* Consecutive readings > threshold or timeout */
     unsigned int distance;
+	  /* ==== 0. If motor already at max position, stop sensor task immediately ==== */
+    if (g_position_ms >= TOTAL_TIME_MS)
+    {
+        HCSR04_TRIG = 0;      /* Ensure TRIG stays low so sensor is disabled */
+        obstacle_triggered = 0;/* Reset trigger flag so that after?????????? */
+        return;
+    }
 
-    /* 1) If motor is in motion, skip HC-SR04 ops and reset flag */
+    /* ---- 1. Down-sample: only measure every 10th call (~100ms) ---- */
+    if (++skip_cnt < 10)
+    {
+        return;  /* Skip this sampling round */
+    }
+    skip_cnt = 0;  /* Reset counter every 100ms */
+
+    /* ---- 2. If motor is moving, skip measurement and reset flags ---- */
     if (OneKey_IsMoving())
     {
-        /* Clear trigger flag so next time motor is idle,
-         * a new obstacle-trigger can occur if needed */
+        hit_cnt  = 0;
+        miss_cnt = 0;
         obstacle_triggered = 0;
         return;
     }
 
-    /* 2) Motor is idle: perform distance measurement */
+    /* ---- 3. Perform one distance measurement ---- */
     distance = HCSR04_GetDistanceCm();
 
-    /* 3) If valid distance and <= threshold AND not yet triggered */
+    /* ---- 4. Update hit/miss counters ---- */
     if (distance != 0xFFFF && distance <= OBSTACLE_THRESHOLD_CM)
     {
-        if (!obstacle_triggered)
-        {
-            /* Trigger one-key close exactly once */
-            OneKey_Close();
-            obstacle_triggered = 1;
-        }
+        /* Detected valid reading within threshold */
+        if (hit_cnt < 3) hit_cnt++;
+        miss_cnt = 0;
     }
     else
     {
-        /* If no obstacle or distance > threshold, reset flag */
-        obstacle_triggered = 0;
+        /* No obstacle or timeout */
+        if (miss_cnt < 3) miss_cnt++;
+        hit_cnt = 0;
+    }
+
+    /* ---- 5. Decision: trigger on 3 consecutive hits; reset on 3 consecutive misses ---- */
+    if (hit_cnt >= 3 && !obstacle_triggered)
+    {
+			/* Enable buzzer before calling auto-close */
+        Buzzer_Enable();
+        OneKey_Close();          /* Initiate one-key close */
+				Buzzer_Disable();
+        obstacle_triggered = 1;  /* Ensure only triggered once */
+    }
+    if (miss_cnt >= 3)
+    {
+        obstacle_triggered = 0;  /* Ready for next trigger */
     }
 }
