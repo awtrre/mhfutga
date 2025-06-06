@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.7.0   ONEKEY                                                            06/06/2025 00:01:25 PAGE 1   
+C51 COMPILER V9.60.7.0   ONEKEY                                                            06/07/2025 00:13:50 PAGE 1   
 
 
 C51 COMPILER V9.60.7.0, COMPILATION OF MODULE ONEKEY
@@ -8,137 +8,206 @@ COMPILER INVOKED BY: D:\Program Files\Keli C51\C51\BIN\C51.EXE onekey.c OPTIMIZE
 
 line level    source
 
-   1          // onekey.c
-   2          
-   3          #include "onekey.h"
-   4          #include "motor.h"      /* Provides StepMotor_RunMs, StepMotor_RunReverseMs, StepMotor_Stop */
-   5          #include "eeprom.h"     /* Provides SavePositionToEEPROM */
-   6          #include <reg52.h>      /* SFR definitions */
-   7          
-   8          /* External global variable holding current position in ms */
-   9          extern long g_position_ms;
-  10          
-  11          /* Internal flag to indicate if motor is running (0 = idle, 1 = running) */
-  12          static bit g_motor_running = 0;
-  13          
-  14          /**
-  15           * @brief  Immediately stop motor and save current position to EEPROM.
-  16           *         Note: In this simplified implementation, we cannot calculate
-  17           *         the new g_position_ms if it's stopped mid-run, so we leave it unchanged.
-  18           */
-  19          void OneKey_StopAndSave(void)
-  20          {
-  21   1          /* If motor is currently running, stop it */
-  22   1          if (g_motor_running)
-  23   1          {
-  24   2              StepMotor_Stop();
-  25   2              /* Do NOT change g_position_ms here, because we don't know elapsed time */
-  26   2              SavePositionToEEPROM();
-  27   2              g_motor_running = 0;
-  28   2          }
-  29   1      }
-  30          
-  31          /**
-  32           * @brief  Initiate a one-key open action:
-  33           *         - If motor currently running, stop and save.
-  34           *         - Else if not fully open, run forward continuously until fully open.
-  35           */
-  36          void OneKey_Open(void)
-  37          {
-  38   1          unsigned long remaining_time;
-  39   1      
-  40   1          /* If motor already running, stop + save, then return */
-  41   1          if (g_motor_running)
-  42   1          {
-  43   2              OneKey_StopAndSave();
-  44   2              return;
-  45   2          }
-  46   1      
-  47   1          /* If already fully closed or below, do nothing */
-  48   1          if (g_position_ms <= 0)
-  49   1          {
-  50   2              return;
-  51   2          }
-  52   1      
-  53   1          /* Calculate how much time is needed to reach 0 */
-  54   1          remaining_time = (unsigned long)g_position_ms;  /* time to run reverse to zero */
-C51 COMPILER V9.60.7.0   ONEKEY                                                            06/06/2025 00:01:25 PAGE 2   
+   1          #include "onekey.h"
+   2          #include "motor.h"      /* Provides StepMotor_RunMs, StepMotor_RunReverseMs, StepMotor_Stop */
+   3          #include "eeprom.h"     /* Provides SavePositionToEEPROM */
+   4          #include "buzzer.h"     /* NEW: For Buzzer_IsEnabled(), Buzzer_Beep() */
+   5          #include <reg52.h>      /* SFR definitions */
+   6          
+   7          /* External global variable holding current position in milliseconds */
+   8          extern long g_position_ms;
+   9          
+  10          /* Internal flag indicating whether the motor is running (0 = idle, 1 = running) */
+  11          static bit g_motor_running = 0;
+  12          
+  13          /* Time slice for segmented motion in milliseconds */
+  14          #define SLICE_MS 100U  /* Each segment runs for 100 ms; adjust as needed */
+  15          
+  16          /* Macros to check if K1 (P3.0) or K2 (P3.1) are pressed (active-low) */
+  17          #define IS_K1_PRESSED() ((P3 & 0x01) == 0)
+  18          #define IS_K2_PRESSED() ((P3 & 0x02) == 0)
+  19          
+  20          /**
+  21           * @brief  Immediately stop the motor and save current position to EEPROM.
+  22           *         If the motor is running, it calls StepMotor_Stop(), writes
+  23           *         g_position_ms into EEPROM, and clears the running flag.
+  24           */
+  25          void OneKey_StopAndSave(void)
+  26          {
+  27   1          if (g_motor_running)
+  28   1          {
+  29   2              StepMotor_Stop();            /* Stop the motor immediately */
+  30   2              SavePositionToEEPROM();      /* Save current position to EEPROM */
+  31   2              g_motor_running = 0;         /* Mark motor as idle */
+  32   2          }
+  33   1      }
+  34          
+  35          /**
+  36           * @brief  Perform a one-key "open" action:
+  37           *         - If motor is already running, stop and save, then return.
+  38           *         - If position <= 0 (already fully closed), do nothing.
+  39           *         - Otherwise, run the motor in reverse (toward closed) in segments:
+  40           *             * Each segment runs for SLICE_MS (or the remaining time).
+  41           *             * After each segment, update g_position_ms and check K1/K2.
+  42           *             * If K1 or K2 is pressed, stop motor, save position, and exit.
+  43           *         - If segments finish normally, set position to 0, stop motor,
+  44           *           save to EEPROM, and clear running flag.
+  45           */
+  46          void OneKey_Open(void)
+  47          {
+  48   1          unsigned long remaining_time;
+  49   1          unsigned int slice;
+  50   1      
+  51   1          /* If motor is running, interrupt and save */
+  52   1          if (g_motor_running)
+  53   1          {
+  54   2              OneKey_StopAndSave();
+C51 COMPILER V9.60.7.0   ONEKEY                                                            06/07/2025 00:13:50 PAGE 2   
 
-  55   1      
-  56   1          /* Run reverse for remaining_time (blocking call) */
-  57   1          g_motor_running = 1;
-  58   1          StepMotor_RunReverseMs((unsigned int)remaining_time);
-  59   1      
-  60   1          /* After running to fully closed, update position and save */
-  61   1          g_position_ms = 0;
-  62   1          StepMotor_Stop();
-  63   1          SavePositionToEEPROM();
-  64   1          g_motor_running = 0;
-  65   1      
-  66   1      }
-  67          
-  68          /**
-  69           * @brief  Initiate a one-key close action:
-  70           *         - If motor currently running, stop and save.
-  71           *         - Else if not fully closed, run reverse continuously until fully closed.
-  72           */
-  73          void OneKey_Close(void)
-  74          {
-  75   1         unsigned long remaining_time;
-  76   1      
-  77   1          /* If motor already running, stop + save, then return */
-  78   1          if (g_motor_running)
-  79   1          {
-  80   2              OneKey_StopAndSave();
-  81   2              return;
-  82   2          }
-  83   1      
-  84   1          /* If already fully open or beyond, do nothing */
-  85   1          if (g_position_ms >= TOTAL_TIME_MS)
-  86   1          {
-  87   2              return;
-  88   2          }
-  89   1      
-  90   1          /* Calculate how much time is needed to reach TOTAL_TIME_MS */
-  91   1          remaining_time = TOTAL_TIME_MS - g_position_ms;
-  92   1      
-  93   1          /* Run forward for remaining_time (blocking call) */
-  94   1          g_motor_running = 1;
-  95   1          StepMotor_RunMs((unsigned int)remaining_time);
-  96   1      
-  97   1          /* After running to fully open, update position and save */
-  98   1          g_position_ms = TOTAL_TIME_MS;
-  99   1          StepMotor_Stop();
- 100   1          SavePositionToEEPROM();
- 101   1          g_motor_running = 0;
- 102   1      }
- 103          
- 104          /**
- 105           * @brief  Empty periodic task placeholder. In this blocking design,
- 106           *         OneKey_Open/Close do all the work, so OneKey_Task() can be empty.
- 107           */
- 108          void OneKey_Task(void)
- 109          {
- 110   1          /* No periodic slices needed in blocking implementation */
- 111   1      }
- 112          
- 113          /**
- 114           * @brief  Return non-zero if motor is currently in motion.
- 115           */
- 116          unsigned char OneKey_IsMoving(void)
-C51 COMPILER V9.60.7.0   ONEKEY                                                            06/06/2025 00:01:25 PAGE 3   
+  55   2              return;
+  56   2          }
+  57   1      
+  58   1          /* If already fully closed, no action needed */
+  59   1          if (g_position_ms <= 0)
+  60   1          {
+  61   2              return;
+  62   2          }
+  63   1      
+  64   1          /* Calculate time needed to reach position 0 */
+  65   1          remaining_time = (unsigned long)g_position_ms;
+  66   1      
+  67   1          g_motor_running = 1;  /* Mark motor as running */
+  68   1      
+  69   1          /* Loop in segments until target or interruption */
+  70   1          while (remaining_time > 0)
+  71   1          {
+  72   2              /* Determine segment duration */
+  73   2              slice = (remaining_time >= SLICE_MS) ? SLICE_MS : (unsigned int)remaining_time;
+  74   2      
+  75   2              /* Run motor in reverse for this segment */
+  76   2              StepMotor_RunReverseMs(slice);
+  77   2      
+  78   2              /* Update current position */
+  79   2              g_position_ms -= slice;
+  80   2              remaining_time -= slice;
+  81   2      
+  82   2              /* Check if K1 or K2 is pressed; if so, interrupt */
+  83   2              if (IS_K1_PRESSED() || IS_K2_PRESSED())
+  84   2              {
+  85   3                  StepMotor_Stop();           /* Stop motor immediately */
+  86   3                  SavePositionToEEPROM();     /* Save current position */
+  87   3                  g_motor_running = 0;        /* Mark motor as idle */
+  88   3                  return;                     /* Exit the function */
+  89   3              }
+  90   2          }
+  91   1      
+  92   1          /* If loop completes normally, we've reached position 0 */
+  93   1          g_position_ms = 0;
+  94   1          StepMotor_Stop();             /* Ensure motor is stopped */
+  95   1          SavePositionToEEPROM();       /* Save final position */
+  96   1          g_motor_running = 0;          /* Mark motor as idle */
+  97   1      }
+  98          
+  99          /**
+ 100           * @brief  Perform a one-key "close" action:
+ 101           *         - If motor is already running, stop and save, then return.
+ 102           *         - If position >= TOTAL_TIME_MS (fully open), do nothing.
+ 103           *         - Otherwise, run the motor forward (toward open) in segments:
+ 104           *             * Each segment runs for SLICE_MS (or the remaining time).
+ 105           *             * After each segment, update g_position_ms and check K1/K2.
+ 106           *             * If buzzer is enabled, call Buzzer_Beep() here (every 100 ms).
+ 107           *             * If K1 or K2 is pressed, stop motor, save position, and exit.
+ 108           *         - If segments finish normally, set position to TOTAL_TIME_MS, stop motor,
+ 109           *           save to EEPROM, and clear running flag.
+ 110           */
+ 111          void OneKey_Close(void)
+ 112          {
+ 113   1          unsigned long remaining_time;
+ 114   1          unsigned int slice;
+ 115   1      
+ 116   1          /* If motor is running, interrupt and save */
+C51 COMPILER V9.60.7.0   ONEKEY                                                            06/07/2025 00:13:50 PAGE 3   
 
- 117          {
- 118   1          return g_motor_running ? 1 : 0;
- 119   1      }
+ 117   1          if (g_motor_running)
+ 118   1          {
+ 119   2              OneKey_StopAndSave();
+ 120   2              return;
+ 121   2          }
+ 122   1      
+ 123   1          /* If already fully open, no action needed */
+ 124   1          if (g_position_ms >= TOTAL_TIME_MS)
+ 125   1          {
+ 126   2              return;
+ 127   2          }
+ 128   1      
+ 129   1          /* Calculate time needed to reach fully open */
+ 130   1          remaining_time = TOTAL_TIME_MS - g_position_ms;
+ 131   1      
+ 132   1          g_motor_running = 1;  /* Mark motor as running */
+ 133   1      
+ 134   1          /* Loop in segments until target or interruption */
+ 135   1          while (remaining_time > 0)
+ 136   1          {
+ 137   2              /* Determine segment duration */
+ 138   2              slice = (remaining_time >= SLICE_MS) ? SLICE_MS : (unsigned int)remaining_time;
+ 139   2      
+ 140   2              /* Run motor forward for this segment */
+ 141   2              StepMotor_RunMs(slice);
+ 142   2      
+ 143   2              /* Update current position */
+ 144   2              g_position_ms += slice;
+ 145   2              remaining_time -= slice;
+ 146   2      
+ 147   2              /* If buzzer is enabled (auto-close), produce one beep per 100 ms */
+ 148   2              if (Buzzer_IsEnabled())
+ 149   2              {
+ 150   3                  Buzzer_Beep();
+ 151   3              }
+ 152   2      
+ 153   2              /* Check if K1 or K2 is pressed; if so, interrupt */
+ 154   2              if (IS_K1_PRESSED() || IS_K2_PRESSED())
+ 155   2              {
+ 156   3                  StepMotor_Stop();           /* Stop motor immediately */
+ 157   3                  SavePositionToEEPROM();     /* Save current position */
+ 158   3                  g_motor_running = 0;        /* Mark motor as idle */
+ 159   3                  return;                     /* Exit the function */
+ 160   3              }
+ 161   2          }
+ 162   1      
+ 163   1          /* If loop completes normally, we've reached fully open */
+ 164   1          g_position_ms = TOTAL_TIME_MS;
+ 165   1          StepMotor_Stop();             /* Ensure motor is stopped */
+ 166   1          SavePositionToEEPROM();       /* Save final position */
+ 167   1          g_motor_running = 0;          /* Mark motor as idle */
+ 168   1      }
+ 169          
+ 170          /**
+ 171           * @brief  Periodic task placeholder.
+ 172           *         In this blocking implementation, OneKey_Open/Close handle their own loops,
+ 173           *         so no periodic action is needed here.
+ 174           */
+ 175          void OneKey_Task(void)
+ 176          {
+ 177   1          /* No periodic slices needed in blocking design */
+ 178   1      }
+C51 COMPILER V9.60.7.0   ONEKEY                                                            06/07/2025 00:13:50 PAGE 4   
+
+ 179          
+ 180          /**
+ 181           * @brief  Return 1 if motor is currently moving, 0 otherwise.
+ 182           */
+ 183          unsigned char OneKey_IsMoving(void)
+ 184          {
+ 185   1          return g_motor_running ? 1 : 0;
+ 186   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    164    ----
+   CODE SIZE        =    400    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =   ----       8
+   DATA SIZE        =   ----      12
    IDATA SIZE       =   ----    ----
    BIT SIZE         =      1    ----
 END OF MODULE INFORMATION.

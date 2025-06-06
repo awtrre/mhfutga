@@ -6,6 +6,8 @@
 #include "motor.h"       /* For delay_ms() and stepper functions */
 #include "hcsr04.h"      /* For HCSR04_Init(), HCSR04_Task() */
 #include "eeprom.h"      /* For EEPROM_ReadByte() */
+#include "buzzer.h" 		/* NEW: For Buzzer_Init(), etc. */
+
 
 long g_position_ms = 0;    /* Global motor position in ms */
 
@@ -41,7 +43,10 @@ void main(void)
 
     /* 3) Initialize HC-SR04 ultrasonic sensor pins */
     HCSR04_Init();
-
+	
+	  /* 4) Initialize buzzer pin */
+		Buzzer_Init();   
+	
     while (1)
     {
         /* --- Handle manual buttons (blocking in 700ms slices) --- */

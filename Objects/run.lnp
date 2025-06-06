@@ -4,6 +4,7 @@
 ".\Objects\buttons.obj",
 ".\Objects\eeprom.obj",
 ".\Objects\onekey.obj",
-".\Objects\hcsr04.obj" 
+".\Objects\hcsr04.obj",
+".\Objects\buzzer.obj" 
 TO ".\Objects\run" 
 PRINT(".\Listings\run.m51") RAMSIZE(256) 
