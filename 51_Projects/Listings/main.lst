@@ -1,0 +1,108 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              08/01/2025 15:23:04 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          // main.c
+   2          
+   3          #include <reg52.h>
+   4          #include "buttons.h"     /* For Buttons_Init(), ButtonX_Handle() */
+   5          #include "onekey.h"      /* For OneKey_Open(), OneKey_Close(), OneKey_Task(), OneKey_IsMoving() */
+   6          #include "motor.h"       /* For delay_ms() and stepper functions */
+   7          #include "hcsr04.h"      /* For HCSR04_Init(), HCSR04_Task() */
+   8          #include "eeprom.h"      /* For EEPROM_ReadByte() */
+   9          #include "buzzer.h"     /* For Buzzer_Init(), etc. */
+  10          #include "uart.h"       // Include the new UART header file
+  11          
+  12          
+  13          long g_position_ms = 0;    /* Global motor position in ms */
+  14          
+  15          /**
+  16           * @brief  Read the 32-bit saved position from EEPROM (0x2000..0x2003),
+  17           *         combine into 'g_position_ms' (little-endian).
+  18           */
+  19          static void LoadPositionFromEEPROM(void)
+  20          {
+  21   1          unsigned char b0, b1, b2, b3;
+  22   1          unsigned int base_addr = 0x2000;
+  23   1      
+  24   1          /* Read four bytes from EEPROM */
+  25   1          b0 = EEPROM_ReadByte(base_addr);
+  26   1          b1 = EEPROM_ReadByte(base_addr + 1);
+  27   1          b2 = EEPROM_ReadByte(base_addr + 2);
+  28   1          b3 = EEPROM_ReadByte(base_addr + 3);
+  29   1      
+  30   1          /* Combine into a signed 32-bit long (little-endian) */
+  31   1          g_position_ms =  (long)b0
+  32   1                         | ((long)b1 << 8)
+  33   1                         | ((long)b2 << 16)
+  34   1                         | ((long)b3 << 24);
+  35   1      }
+  36          
+  37          void main(void)
+  38          {
+  39   1         /* 1) Initialize UART for communication */
+  40   1          UART_Init();         
+  41   1          /* 2) Initialize buttons (configure P3.0~P3.3 as inputs with pull-ups) */
+  42   1          Buttons_Init();
+  43   1      
+  44   1          /* 3) Restore last saved motor position from EEPROM */
+  45   1          LoadPositionFromEEPROM();
+  46   1      
+  47   1          /* 4) Initialize HC-SR04 ultrasonic sensor pins */
+  48   1          HCSR04_Init();
+  49   1        
+  50   1          /* 5) Initialize buzzer pin */
+  51   1          Buzzer_Init();   
+  52   1        
+  53   1          while (1)
+  54   1          {
+C51 COMPILER V9.60.7.0   MAIN                                                              08/01/2025 15:23:04 PAGE 2   
+
+  55   2             /* --- Check for received UART command --- */
+  56   2              UART_Task();         // Call UART task handler
+  57   2              /* --- Handle manual buttons (blocking in 700ms slices) --- */
+  58   2              Button1_Handle();     /* Manual forward (P3.0) */
+  59   2              Button2_Handle();     /* Manual reverse (P3.1) */
+  60   2      
+  61   2              /* --- Handle one-key OPEN / CLOSE (blocking until done or interrupted) --- */
+  62   2              Button3_Handle();     /* One-key OPEN (P3.2) */
+  63   2              Button4_Handle();     /* One-key CLOSE (P3.3) */
+  64   2      
+  65   2              /* 
+  66   2               * --- HC-SR04 automatic obstacle check ---
+  67   2               * Only call HCSR04_Task when motor is IDLE.
+  68   2               */
+  69   2              if (!OneKey_IsMoving())
+  70   2              {
+  71   3                  HCSR04_Task();
+  72   3              }
+  73   2      
+  74   2              /* 
+  75   2               * --- No need to call OneKey_Task() here, 
+  76   2               *     because blocking OneKey_Open/Close do not require slices. --- 
+  77   2               */
+  78   2      
+  79   2              /* --- Main loop tick: approx. 10 ms delay --- */
+  80   2              delay_ms(10);
+  81   2          }
+  82   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    217    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4       6
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
