@@ -1,0 +1,82 @@
+#include "main.h"
+
+// ==========================================
+// 1. Hardware Pin Definitions
+// ==========================================
+// Adjust these macros to match your actual STM32CubeMX configuration
+
+// Motor Driver Pins (e.g., L298N)
+#define MOTOR_PORT        GPIOA
+#define MOTOR_PIN_IN1     GPIO_PIN_0   // Control Pin 1
+#define MOTOR_PIN_IN2     GPIO_PIN_1   // Control Pin 2
+
+// Limit Switches (Safety Sensors)
+// Assumption: Switches connect to GND when pressed (Active Low)
+// Adjust logic if your switches are Active High
+#define LIMIT_SW_PORT     GPIOB
+#define LIMIT_PIN_OPEN    GPIO_PIN_0   // Triggered when window is fully OPEN
+#define LIMIT_PIN_CLOSE   GPIO_PIN_1   // Triggered when window is fully CLOSED
+
+// ==========================================
+// 2. Command Definitions
+// ==========================================
+#define CMD_STOP    0x00
+#define CMD_OPEN    0x01
+#define CMD_CLOSE   0x02
+
+/**
+  * @brief  Controls the window motor based on voice commands and limit switch feedback.
+  * @param  cmd: The command byte received from the voice module (0x00, 0x01, 0x02).
+  * @retval None
+  * @note   Call this function periodically in the main loop to ensure real-time safety checks.
+  */
+void SmartWindow_Handler(uint8_t cmd)
+{
+    // Step 1: Read the current state of the limit switches
+    // GPIO_PIN_RESET (0) usually indicates the switch is pressed (if configured as Pull-Up)
+    GPIO_PinState limit_top_active = HAL_GPIO_ReadPin(LIMIT_SW_PORT, LIMIT_PIN_OPEN);
+    GPIO_PinState limit_bottom_active = HAL_GPIO_ReadPin(LIMIT_SW_PORT, LIMIT_PIN_CLOSE);
+
+    // Step 2: Execute logic based on the received command
+    switch (cmd)
+    {
+        case CMD_OPEN:
+            // Safety Check: If the "Top/Open" limit switch is triggered (Low), do not move further.
+            if (limit_top_active == GPIO_PIN_RESET) 
+            {
+                // Stop the motor immediately to prevent damage
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN1, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN2, GPIO_PIN_RESET);
+            }
+            else 
+            {
+                // Safe to open: Set Motor to Forward direction
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN1, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN2, GPIO_PIN_RESET);
+            }
+            break;
+
+        case CMD_CLOSE:
+            // Safety Check: If the "Bottom/Close" limit switch is triggered (Low), do not move further.
+            if (limit_bottom_active == GPIO_PIN_RESET) 
+            {
+                // Stop the motor immediately
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN1, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN2, GPIO_PIN_RESET);
+            }
+            else 
+            {
+                // Safe to close: Set Motor to Reverse direction
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN1, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN2, GPIO_PIN_SET);
+            }
+            break;
+
+        case CMD_STOP:
+        default:
+            // Stop command or unknown command: Brake/Stop the motor
+            HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN1, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(MOTOR_PORT, MOTOR_PIN_IN2, GPIO_PIN_RESET);
+            break;
+    }
+}
